@@ -15,13 +15,17 @@ $ ->
 
 class Flatware extends Backbone.Model
   initialize: ->
-    @jobs    = new Backbone.Collection
+    @jobs    = new Backbone.Collection model: Job
     @workers = new Backbone.Collection
+    @on 'all', (event)=> console.log arguments
+
     @on 'jobs', (jobs)=> @jobs.set jobs
     @on 'started', (work)=>
       {worker, job} = work
-      @workers.add(id: worker)
-      @jobs.get(job).set(workerId: worker)
+      worker = @workers.add(id: worker).get(worker)
+      job = @jobs.add(id: job).get(job)
+      job.set(workerId: worker)
+      worker.set(job: job)
 
     @on 'progress', (progress)=>
       {status, worker} = progress
@@ -32,24 +36,32 @@ class Flatware extends Backbone.Model
 
 View = {}
 
+class Job extends Backbone.Model
+  initialize: ->
+
+
 class View.Job extends Backbone.View
+  tagName: 'li'
   initialize: ->
     @listenTo @model, 'change', @render
+    @listenTo @model, 'change:workerId', @remove
   render: ->
-    console.log @model.attributes
+    @$el.html @model.id
     this
 
 class View.Worker extends Backbone.View
+  tagName: 'li'
   initialize: ->
     @listenTo @model, 'change', @render
+    @listenTo @model, 'change:job', @render
   render: ->
-    console.log @model.attributes
+    @$el.html "#{@model.id}<br>#{@model.get('job')?.id}"
     this
 
 class View.Flatware extends Backbone.View
   initialize: ->
     @listenTo @model.jobs, 'add', (job)->
-      new View.Job(model: job).render().$el.appendTo 'body'
+      new View.Job(model: job).render().$el.appendTo '#waiting'
 
     @listenTo @model.workers, 'add', (job)->
-      new View.Worker(model: job).render().$el.appendTo 'body'
+      new View.Worker(model: job).render().$el.appendTo '#workers'
